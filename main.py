@@ -1,49 +1,55 @@
-import json
-import logging
-from time import sleep
+import os
+import subprocess
+
 from ulauncher.api.client.Extension import Extension
 from ulauncher.api.client.EventListener import EventListener
 from ulauncher.api.shared.event import KeywordQueryEvent, ItemEnterEvent
 from ulauncher.api.shared.item.ExtensionResultItem import ExtensionResultItem
-from ulauncher.api.shared.action.RenderResultListAction import RenderResultListAction
 from ulauncher.api.shared.action.ExtensionCustomAction import ExtensionCustomAction
-from ulauncher.api.shared.action.HideWindowAction import HideWindowAction
-
-logger = logging.getLogger(__name__)
 
 
-class DemoExtension(Extension):
+class CopyImageToClipboardAction(ExtensionCustomAction):
+    def __init__(self, image_path):
+        self._image_path = image_path
 
+    def run(self):
+        subprocess.call(['xclip', '-selection', 'clipboard', '-t', 'image/png', '-i', self._image_path])
+        return None
+
+
+class CopyImageToClipboardListener(EventListener):
+    def on_event(self, event, extension):
+        if isinstance(event, ItemEnterEvent):
+            item = event.get_data()
+            action = item.get_action()
+
+            if isinstance(action, CopyImageToClipboardAction):
+                action.run()
+
+
+class LocalImagesSearchExtension(Extension):
     def __init__(self):
-        super(DemoExtension, self).__init__()
-        self.subscribe(KeywordQueryEvent, KeywordQueryEventListener())
-        self.subscribe(ItemEnterEvent, ItemEnterEventListener())
+        super(LocalImagesSearchExtension, self).__init__()
+        self.subscribe(KeywordQueryEvent, CopyImageToClipboardListener())
 
+    def search(self, query):
+        image_dir = os.path.expanduser("~/Pictures")
+        images = [os.path.join(image_dir, f) for f in os.listdir(image_dir) if f.endswith(".png")]
 
-class KeywordQueryEventListener(EventListener):
+        results = []
+        for image in images:
+            if query in image:
+                results.append(
+                    ExtensionResultItem(
+                        icon='images/icon.png',
+                        name=image,
+                        description='Copy image to clipboard',
+                        on_enter=CopyImageToClipboardAction(image)
+                    )
+                )
 
-    def on_event(self, event, extension):
-        items = []
-        logger.info('preferences %s' % json.dumps(extension.preferences))
-        for i in range(5):
-            item_name = extension.preferences['item_name']
-            data = {'new_name': '%s %s was clicked' % (item_name, i)}
-            items.append(ExtensionResultItem(icon='images/icon.png',
-                                             name='%s %s' % (item_name, i),
-                                             description='Item description %s' % i,
-                                             on_enter=ExtensionCustomAction(data, keep_app_open=True)))
-
-        return RenderResultListAction(items)
-
-
-class ItemEnterEventListener(EventListener):
-
-    def on_event(self, event, extension):
-        data = event.get_data()
-        return RenderResultListAction([ExtensionResultItem(icon='images/icon.png',
-                                                           name=data['new_name'],
-                                                           on_enter=HideWindowAction())])
+        return results
 
 
 if __name__ == '__main__':
-    DemoExtension().run()
+    LocalImagesSearchExtension().run()

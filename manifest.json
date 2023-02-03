@@ -1,18 +1,18 @@
 {
   "required_api_version": "^2.0.0",
-  "name": "Demo",
-  "description": "Demo extension",
-  "developer_name": "Aleksandr Gornostal",
+  "name": "CopyImage",
+  "description": "Copy image to cliboard",
+  "developer_name": "Nikola Ravic",
   "icon": "images/icon.png",
   "options": {
     "query_debounce": 0.05
   },
   "preferences": [
     {
-      "id": "demo_kw",
+      "id": "img_kw",
       "type": "keyword",
-      "name": "Demo",
-      "default_value": "dm"
+      "name": "Image",
+      "default_value": "img"
     },
     {
       "id": "item_name",
